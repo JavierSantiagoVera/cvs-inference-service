@@ -9,6 +9,13 @@ benchmarks de latencia reproducibles e imagen Docker sin PyTorch.
 > **Herramienta de investigación.** No es un dispositivo médico y no debe
 > usarse para tomar decisiones clínicas.
 
+![Sesión contra la API: se abre una sesión, se envían cinco frames y la ventana temporal se llena de 1/15 a 5/15](docs/demo.gif)
+
+<sub>Sesión real contra el servicio (int8, 16 hilos, CPU) con frames sintéticos:
+muestra el flujo de la API y la latencia, no predicciones clínicas; las
+probabilidades de un frame sintético no significan nada. Respuestas resumidas en
+una línea. Generado con `scripts/make_demo.py`.</sub>
+
 ## Qué hace
 
 En una colecistectomía, antes de cortar el conducto y la arteria císticos, el
@@ -47,6 +54,11 @@ Perceiver adaptado da una diferencia de 0.0 frente al código original, y los
 modelos ONNX fp32 difieren de PyTorch en 4.8e-6 como máximo.
 
 ### Latencia
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/latency-dark.svg">
+  <img alt="Gráfica de latencia por frame, p50 y p95, de PyTorch fp32, ONNX fp32 y ONNX int8; las cifras están en la tabla" src="docs/latency-light.svg">
+</picture>
 
 <!-- bench:start — generado por benchmarks/bench_latency.py, no editar a mano -->
 | Backend | Precisión | p50 (ms) | p95 (ms) | Throughput | Tamaño | Δ exactitud |
@@ -108,6 +120,10 @@ uv run uvicorn cvs_serve.api:app
 ```
 
 La documentación interactiva queda en `http://localhost:8000/docs`.
+
+En Windows, usa `127.0.0.1` en lugar de `localhost` al probar en local:
+uvicorn escucha solo en IPv4 y el cliente intenta primero IPv6, lo que suma
+~200 ms a cada conexión (medido: 500 ms frente a 285 ms por frame).
 
 ## Uso de la API
 
@@ -177,6 +193,8 @@ uv sync                                    # dependencias de desarrollo y torch
 uv run pytest                              # tests (modelos pequeños, sin datos clínicos)
 uv run ruff check . && uv run ruff format --check .
 uv run python benchmarks/bench_latency.py --readme README.md   # latencia y tabla del README
+uv run python scripts/make_latency_chart.py                     # gráfica desde results.json
+uv run python scripts/make_demo.py                              # docs/demo.gif (sesión real)
 
 # mAP de fp32 e int8 en SAGES 2024; descarga los videos fuera del repo
 uv run --group eval python benchmarks/eval_map.py --data ../datasets/SAGES_2024 --n-videos 60

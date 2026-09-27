@@ -35,7 +35,14 @@ Modelos: !`ls models/*.onnx 2>/dev/null || echo "ninguno: correr primero /export
    - `git diff README.md benchmarks/results.json`: solo debe cambiar lo que hay
      entre `<!-- bench:start` y `<!-- bench:end -->`.
 
-4. **Nunca editar a mano** la tabla ni las notas entre los marcadores.
+4. **Regenerar la gráfica** desde el mismo JSON:
+   ```bash
+   uv run python scripts/make_latency_chart.py
+   ```
+   Si cambió la latencia de forma notable, regenerar también el demo
+   (`uv run python scripts/make_demo.py`) para que el GIF no contradiga la tabla.
+
+5. **Nunca editar a mano** la tabla ni las notas entre los marcadores.
 
 ## Prohibido
 
