@@ -26,6 +26,13 @@ PERCEIVER_CONFIG_KEYS = (
     "pe_max_len",
 )
 
+# Export a ONNX. Tolerancias de paridad definidas en la skill export-onnx.
+ONNX_OPSET = 18
+PARITY_RTOL = 1e-3
+PARITY_ATOL = 1e-5
+ENCODER_ONNX = "encoder.onnx"
+PERCEIVER_ONNX = "perceiver.onnx"
+
 N_CLASSES = 3
 CRITERIA = ("c1", "c2", "c3")
 PRED_THRESHOLD = 0.5

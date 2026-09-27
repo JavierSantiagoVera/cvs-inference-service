@@ -1,0 +1,27 @@
+{
+  "export": {
+    "opset": 18,
+    "parity_max_abs_diff": {
+      "encoder_b1": 4.76837158203125e-06,
+      "perceiver_b1": 2.2351741790771484e-07,
+      "encoder_b3": 5.245208740234375e-06,
+      "perceiver_b3": 2.384185791015625e-07
+    },
+    "parity_tolerance": {
+      "rtol": 0.001,
+      "atol": 1e-05
+    },
+    "size_mb": {
+      "encoder.onnx": 1162.7,
+      "perceiver.onnx": 105.2,
+      "encoder.int8.onnx": 296.9,
+      "perceiver.int8.onnx": 44.8
+    },
+    "int8_vs_fp32_synthetic": {
+      "max_abs_prob_diff": 0.0216,
+      "threshold_agreement": 0.9777777777777777,
+      "n_frames": 15
+    },
+    "int8_map_drop": null
+  }
+}
