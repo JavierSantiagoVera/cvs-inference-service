@@ -23,6 +23,7 @@ from cvs_serve.config import (
     EMBED_DIM,
     ENCODER_ONNX,
     IMG_SIZE,
+    MODEL_FILES,
     ONNX_OPSET,
     PARITY_ATOL,
     PARITY_RTOL,
@@ -187,8 +188,9 @@ def main(argv: list[str] | None = None) -> None:
             perceiver, per_path, _perceiver_inputs(rng, batch)
         )
 
-    enc_q = quantize(enc_path, args.out / "encoder.int8.onnx")
-    per_q = quantize(per_path, args.out / "perceiver.int8.onnx")
+    enc_q_name, per_q_name = MODEL_FILES["int8"]
+    enc_q = quantize(enc_path, args.out / enc_q_name)
+    per_q = quantize(per_path, args.out / per_q_name)
 
     # Sin frames de validación, la deriva se mide sobre entradas sintéticas:
     # es una señal de alarma, no un sustituto de la mAP.

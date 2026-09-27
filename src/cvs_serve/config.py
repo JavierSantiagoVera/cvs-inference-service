@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
 # Etapa 1: encoder EVA-02 por frame.
 ENCODER_NAME = "eva02_large_patch14_448.mim_m38m_ft_in22k_in1k"
 IMG_SIZE = 448
@@ -36,3 +40,35 @@ PERCEIVER_ONNX = "perceiver.onnx"
 N_CLASSES = 3
 CRITERIA = ("c1", "c2", "c3")
 PRED_THRESHOLD = 0.5
+
+# Archivos ONNX por precisión, dentro del directorio de modelos.
+MODEL_FILES = {
+    "fp32": (ENCODER_ONNX, PERCEIVER_ONNX),
+    "int8": ("encoder.int8.onnx", "perceiver.int8.onnx"),
+}
+
+
+@dataclass(frozen=True)
+class Settings:
+    """Configuración del servicio, leída de variables de entorno CVS_*."""
+
+    models_dir: Path = Path("models")
+    # fp32 por defecto: la caída de mAP de int8 aún no está medida.
+    precision: str = "fp32"
+    max_sessions: int = 32
+    session_ttl_s: float = 300.0
+    num_threads: int = 0  # 0 = lo decide ONNX Runtime
+
+    @classmethod
+    def from_env(cls) -> Settings:
+        env = os.environ
+        settings = cls(
+            models_dir=Path(env.get("CVS_MODELS_DIR", cls.models_dir)),
+            precision=env.get("CVS_PRECISION", cls.precision),
+            max_sessions=int(env.get("CVS_MAX_SESSIONS", cls.max_sessions)),
+            session_ttl_s=float(env.get("CVS_SESSION_TTL_S", cls.session_ttl_s)),
+            num_threads=int(env.get("CVS_NUM_THREADS", cls.num_threads)),
+        )
+        if settings.precision not in MODEL_FILES:
+            raise ValueError(f"CVS_PRECISION debe ser uno de {sorted(MODEL_FILES)}")
+        return settings

@@ -25,6 +25,7 @@ from cvs_serve.config import (
 )
 
 if TYPE_CHECKING:
+    import onnxruntime as ort
     from torch import nn
 
     from cvs_serve.perceiver import PerceiverLiteTemporalGated
@@ -106,6 +107,47 @@ def encode(encoder: nn.Module, pixels: np.ndarray) -> np.ndarray:
         feats = encoder.forward_features(torch.from_numpy(pixels))
         pre = encoder.forward_head(feats, pre_logits=True)
     return pre.reshape(pre.shape[0], -1).numpy()
+
+
+def make_onnx_session(path: Path, num_threads: int = 0) -> ort.InferenceSession:
+    """Crea una sesión de ONNX Runtime en CPU con la configuración del servicio.
+
+    Desactiva el spinning de los hilos intra-op: con dos sesiones alternándose
+    (encoder y Perceiver), los hilos ociosos de una en espera activa le quitan
+    CPU a la otra. En un Ryzen 7 9800X3D bajó el p50 por frame de 1076 a 707 ms
+    en fp32 y de 474 a 276 ms en int8.
+    """
+    import onnxruntime as ort
+
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = num_threads
+    options.inter_op_num_threads = 1
+    options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+    return ort.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])
+
+
+class OnnxPredictor:
+    """Ejecuta el encoder y el Perceiver exportados con ONNX Runtime, sin torch.
+
+    Las sesiones se crean una vez; `InferenceSession.run` es seguro entre hilos.
+    """
+
+    def __init__(self, encoder_path: Path, perceiver_path: Path, num_threads: int = 0) -> None:
+        self._encoder = make_onnx_session(encoder_path, num_threads)
+        self._perceiver = make_onnx_session(perceiver_path, num_threads)
+        logger.info("Modelos ONNX cargados: %s, %s", encoder_path, perceiver_path)
+
+    def embed(self, pixels: np.ndarray) -> np.ndarray:
+        """Embedding [1024] de un frame ya preprocesado, [1, 3, 448, 448]."""
+        return self._encoder.run(None, {"pixels": pixels})[0][0]
+
+    def probabilities(self, inputs: WindowInputs) -> np.ndarray:
+        """Probabilidad de cada criterio [3] para la ventana que termina en el frame actual."""
+        logits = self._perceiver.run(
+            None,
+            {"x": inputs.x, "key_index": inputs.key_index, "positions": inputs.positions},
+        )[0][0]
+        return 1.0 / (1.0 + np.exp(-logits))
 
 
 @dataclass(frozen=True)

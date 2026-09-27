@@ -11,6 +11,7 @@ torch = pytest.importorskip("torch")
 timm = pytest.importorskip("timm")
 pytest.importorskip("onnxscript")
 
+from cvs_serve.model import OnnxPredictor, TemporalWindow  # noqa: E402
 from cvs_serve.onnx_export import (  # noqa: E402
     EncoderEmbedding,
     ParityError,
@@ -81,6 +82,28 @@ def test_quantized_perceiver_runs_and_stays_close(
     quantized = quantize(path, tmp_path / "perceiver.int8.onnx")
 
     np.testing.assert_allclose(run_onnx(quantized, inputs), run_onnx(path, inputs), atol=0.1)
+
+
+def test_onnx_predictor_reproduces_the_pytorch_pipeline(tmp_path: Path) -> None:
+    torch.manual_seed(0)
+    encoder = timm.create_model("eva02_tiny_patch14_224", pretrained=False, num_classes=3).eval()
+    dim = encoder.num_features
+    perceiver = PerceiverLiteTemporalGated(**{**TINY_PERCEIVER, "d_in": dim}).eval()
+    predictor = OnnxPredictor(
+        export_encoder(encoder, tmp_path / "encoder.onnx", img_size=224),
+        export_perceiver(perceiver, tmp_path / "perceiver.onnx", window_size=WINDOW, embed_dim=dim),
+    )
+    pixels = np.random.default_rng(0).standard_normal((1, 3, 224, 224), dtype=np.float32)
+
+    inputs = TemporalWindow(window_size=WINDOW, embed_dim=dim).push(predictor.embed(pixels))
+    probs = predictor.probabilities(inputs)
+
+    with torch.inference_mode():
+        embedding = EncoderEmbedding(encoder)(torch.from_numpy(pixels)).half().float()
+        x = torch.zeros(1, WINDOW, dim)
+        x[0, -1] = embedding[0]
+        logits = perceiver(x, torch.tensor([WINDOW - 1]), torch.zeros(1, WINDOW, dtype=torch.long))
+    np.testing.assert_allclose(probs, torch.sigmoid(logits)[0].numpy(), atol=1e-4)
 
 
 def test_encoder_export_outputs_pre_logits_embedding(tmp_path: Path) -> None:
