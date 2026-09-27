@@ -22,7 +22,7 @@
       "threshold_agreement": 0.9777777777777777,
       "n_frames": 15
     },
-    "int8_map_drop": null
+    "int8_map_drop": -0.32
   },
   "latency": {
     "pytorch_onnx_parity": {
@@ -380,5 +380,43 @@
         }
       }
     }
+  },
+  "int8_eval": {
+    "dataset": "SAGES 2024 CVS Challenge, split test",
+    "subset": {
+      "n_videos": 60,
+      "of": 300,
+      "seed": 0
+    },
+    "n_keyframes": 1080,
+    "positives_per_criterion": {
+      "c1": 108,
+      "c2": 280,
+      "c3": 99
+    },
+    "source_fps": [
+      30.0
+    ],
+    "label": "voto mayoritario de 3 evaluadores (como la evaluación original)",
+    "map": {
+      "fp32": {
+        "macro": 63.83,
+        "c1": 50.47,
+        "c2": 80.49,
+        "c3": 60.52
+      },
+      "int8": {
+        "macro": 64.15,
+        "c1": 50.88,
+        "c2": 80.36,
+        "c3": 61.19
+      }
+    },
+    "int8_drop_points": -0.32,
+    "int8_drop_ci95_points": [
+      -0.89,
+      0.43
+    ],
+    "threshold_agreement": 0.9833
   }
 }

@@ -48,26 +48,31 @@ modelos ONNX fp32 difieren de PyTorch en 4.8e-6 como máximo.
 
 ### Latencia
 
-<!-- Generado con /bench — no editar a mano -->
+<!-- bench:start — generado por benchmarks/bench_latency.py, no editar a mano -->
 | Backend | Precisión | p50 (ms) | p95 (ms) | Throughput | Tamaño | Δ exactitud |
 |---|---|---|---|---|---|---|
 | PyTorch | fp32 | 930.4 | 1098.6 | 1.07 frames/s | 1264.8 MB (pesos en memoria) | referencia |
 | ONNX Runtime | fp32 | 740.4 | 789.1 | 1.35 frames/s | 1267.9 MB | paridad con PyTorch: dif. máx. 4.8e-6 |
-| ONNX Runtime | int8 (dinámica) | 275.5 | 311.9 | 3.63 frames/s | 341.7 MB | **mAP no medida** (sin set de validación) |
+| ONNX Runtime | int8 (dinámica) | 275.5 | 311.9 | 3.63 frames/s | 341.7 MB | +0.3 pts de mAP (IC 95%: -0.4 a +0.9) |
 
 Paso completo por frame con batch 1 (encoder EVA-02 Large a 448×448, ventana
 temporal y Perceiver), que es lo que hace la API en cada petición; el encoder
 es más del 95% del tiempo. Throughput = 1000 / p50, frames procesados en serie.
-CPU AMD Ryzen 7 9800X3D (8 núcleos / 16 hilos), sin GPU, Windows 11, 16 hilos
-en todos los backends; PyTorch 2.14.0, ONNX Runtime 1.30.0 (spinning de hilos
-desactivado, como en el servicio), Python 3.14.3. 120 iteraciones tras 15 de
-calentamiento, dos corridas por etapa (variación de p50 < 2%), cada backend en
-un proceso propio. Script: `benchmarks/bench_latency.py`; datos crudos en
-`benchmarks/results.json`.
+CPU AMD Ryzen 7 9800X3D 8-Core Processor, sin GPU, Windows-11-10.0.26200-SP0,
+16 hilos en todos los backends; PyTorch 2.14.0+cpu, ONNX Runtime 1.30.0
+(spinning de hilos desactivado, como en el servicio), Python 3.14.3. 120
+iteraciones tras 15 de calentamiento, 2 corridas por etapa (variación de p50 <
+2%), cada backend en un proceso propio. Script: `benchmarks/bench_latency.py`;
+datos crudos en `benchmarks/results.json`.
 
-Sobre int8: con 15 frames sintéticos, la probabilidad difiere de fp32 como
-máximo en 0.021 y la decisión por criterio coincide en 44 de 45 casos. Eso no
-reemplaza medir la mAP en SAGES; hasta entonces el servicio usa fp32 por defecto.
+Sobre int8: en 60 de los 300 videos de test de SAGES 2024 (elegidos al azar con
+semilla 0; 1080 fotogramas clave, etiqueta por voto mayoritario), la macro mAP
+pasa de 63.8 en fp32 a 64.2 en int8 (+0.3 puntos; IC 95% por bootstrap de
+videos: -0.4 a +0.9). La decisión con umbral 0.5 coincide en el 98.3% de los
+casos. Es un subconjunto del test, así que su mAP absoluta no es comparable con
+la del paper; lo que mide es la diferencia entre precisiones sobre los mismos
+frames. Script: `benchmarks/eval_map.py`.
+<!-- bench:end -->
 
 ## Inicio rápido
 
@@ -160,10 +165,10 @@ primeros 14 frames el modelo ve menos historia.
   modelo no vio en entrenamiento.
 - **Estado en memoria.** Las sesiones viven en el proceso: un solo worker por
   contenedor y, con varias réplicas, afinidad de sesión en el balanceador.
-- **int8 sin validar.** La caída de mAP de la versión cuantizada no está
-  medida; SAGES 2024 es público
-  ([Hugging Face](https://huggingface.co/datasets/CAMMA-public/SAGES_CVS_Challenge_2024)),
-  así que es el siguiente paso.
+- **int8 validado en un subconjunto.** La comparación con fp32 usa 60 de los
+  300 videos de test de
+  [SAGES 2024](https://huggingface.co/datasets/CAMMA-public/SAGES_CVS_Challenge_2024);
+  el test completo daría un intervalo más estrecho.
 
 ## Desarrollo
 
@@ -171,7 +176,10 @@ primeros 14 frames el modelo ve menos historia.
 uv sync                                    # dependencias de desarrollo y torch
 uv run pytest                              # tests (modelos pequeños, sin datos clínicos)
 uv run ruff check . && uv run ruff format --check .
-uv run python benchmarks/bench_latency.py  # regenera la tabla de latencia
+uv run python benchmarks/bench_latency.py --readme README.md   # latencia y tabla del README
+
+# mAP de fp32 e int8 en SAGES 2024; descarga los videos fuera del repo
+uv run --group eval python benchmarks/eval_map.py --data ../datasets/SAGES_2024 --n-videos 60
 ```
 
 ```

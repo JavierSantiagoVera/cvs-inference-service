@@ -23,6 +23,9 @@ torch = [
     "onnxscript>=0.2",
 ]
 
+# Evaluación de mAP en SAGES (benchmarks/eval_map.py): uv run --group eval ...
+eval = ["opencv-python-headless>=4.10", "scikit-learn>=1.5"]
+
 [tool.uv]
 default-groups = ["dev", "torch"]
 
