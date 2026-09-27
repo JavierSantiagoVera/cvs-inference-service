@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> None:
     int8 = _pipeline_probs(enc_q, per_q, pixels)
     agree = float(((fp32 >= 0.5) == (int8 >= 0.5)).mean())
 
-    results = json.loads(args.results.read_text()) if args.results.exists() else {}
+    results = json.loads(args.results.read_text(encoding="utf-8")) if args.results.exists() else {}
     results["export"] = {
         "opset": ONNX_OPSET,
         "parity_max_abs_diff": parity,

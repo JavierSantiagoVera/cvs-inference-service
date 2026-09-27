@@ -16,9 +16,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import platform
 import subprocess
 import sys
+import textwrap
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -26,7 +28,15 @@ from pathlib import Path
 
 import numpy as np
 
-from cvs_serve.config import EMBED_DIM, IMG_SIZE, MODEL_FILES, PARITY_ATOL, PARITY_RTOL, WINDOW_SIZE
+from cvs_serve.config import (
+    CRITERIA,
+    EMBED_DIM,
+    IMG_SIZE,
+    MODEL_FILES,
+    PARITY_ATOL,
+    PARITY_RTOL,
+    WINDOW_SIZE,
+)
 from cvs_serve.model import TemporalWindow, make_onnx_session
 
 logger = logging.getLogger(__name__)
@@ -264,12 +274,23 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--warmup", type=int, default=WARMUP)
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument("--repeats", type=int, default=REPEATS)
+    parser.add_argument(
+        "--readme", type=Path, help="actualiza la sección de latencia de este README"
+    )
+    parser.add_argument(
+        "--render-only",
+        action="store_true",
+        help="no mide; solo regenera el README desde --results",
+    )
     parser.add_argument("--backend", choices=BACKENDS, help="uso interno: mide un solo backend")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr)
 
     if args.backend:
         sys.stdout.write(json.dumps(measure_backend(args)))
+        return
+    if args.render_only:
+        update_readme(args.readme or Path("README.md"), _read_results(args.results))
         return
 
     latency = check_outputs(args)
@@ -306,11 +327,123 @@ def main(argv: list[str] | None = None) -> None:
     }
     latency["backends"] = backends
 
-    results = json.loads(args.results.read_text()) if args.results.exists() else {}
+    results = _read_results(args.results)
     results["latency"] = latency
     args.results.parent.mkdir(parents=True, exist_ok=True)
     args.results.write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n", "utf-8")
     logger.info("Resultados en %s", args.results)
+    if args.readme:
+        update_readme(args.readme, results)
+
+
+def _read_results(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+README_START = "<!-- bench:start — generado por benchmarks/bench_latency.py, no editar a mano -->"
+README_END = "<!-- bench:end -->"
+_ROWS = (
+    ("pytorch_fp32", "PyTorch", "fp32"),
+    ("onnx_fp32", "ONNX Runtime", "fp32"),
+    ("onnx_int8", "ONNX Runtime", "int8 (dinámica)"),
+)
+
+
+def render_latency_section(latency: dict, int8_eval: dict | None = None) -> str:
+    """Tabla y notas de latencia del README, solo con cifras de results.json."""
+    env, backends = latency["environment"], latency["backends"]
+    parity = latency["pytorch_onnx_parity"]
+    drift = latency["int8_vs_fp32_pipeline"]
+    max_parity = max(parity["encoder_max_abs_diff"], parity["perceiver_max_abs_diff"])
+    if int8_eval:
+        # drop = mAP(fp32) - mAP(int8); en la tabla se muestra el cambio de int8 respecto a fp32.
+        low, high = (-v for v in reversed(int8_eval["int8_drop_ci95_points"]))
+        int8_accuracy = (
+            f"{-int8_eval['int8_drop_points']:+.1f} pts de mAP (IC 95%: {low:+.1f} a {high:+.1f})"
+        )
+    else:
+        int8_accuracy = "**mAP no medida** (sin set de validación)"
+    accuracy = {
+        "pytorch_fp32": "referencia",
+        "onnx_fp32": f"paridad con PyTorch: dif. máx. {max_parity:.1e}".replace("e-0", "e-"),
+        "onnx_int8": int8_accuracy,
+    }
+    lines = [
+        "| Backend | Precisión | p50 (ms) | p95 (ms) | Throughput | Tamaño | Δ exactitud |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for key, name, precision in _ROWS:
+        backend = backends[key]
+        full = backend["stages"]["full"]["reported"]
+        size = f"{backend['size_mb']} MB" + (" (pesos en memoria)" if key.startswith("py") else "")
+        lines.append(
+            f"| {name} | {precision} | {full['p50_ms']:.1f} | {full['p95_ms']:.1f} "
+            f"| {full['throughput_img_s']:.2f} frames/s | {size} | {accuracy[key]} |"
+        )
+
+    stages = [s for b in backends.values() for s in b["stages"].values()]
+    max_variation = max(s["p50_variation_pct"] for s in stages)
+    unstable = not all(s["stable_across_runs"] for s in stages)
+    encoder_share = min(
+        b["stages"]["encoder"]["reported"]["p50_ms"] / b["stages"]["full"]["reported"]["p50_ms"]
+        for b in backends.values()
+    )
+    n_decisions = drift["n_frames"] * len(CRITERIA)
+    agree = round(drift["threshold_agreement"] * n_decisions)
+    stability = (
+        f"**variación de p50 de hasta {max_variation:.0f}% entre corridas**"
+        if unstable
+        else f"variación de p50 < {max(1, math.ceil(max_variation))}%"
+    )
+    gpu = "sin GPU" if env["gpu"].startswith("ninguna") else env["gpu"]
+    method = (
+        "Paso completo por frame con batch 1 (encoder EVA-02 Large a 448×448, ventana "
+        "temporal y Perceiver), que es lo que hace la API en cada petición; el encoder es "
+        f"más del {math.floor(encoder_share * 20) * 5}% del tiempo. Throughput = 1000 / p50, "
+        f"frames procesados en serie. CPU {env['cpu']}, {gpu}, {env['os']}, "
+        f"{env['threads']} hilos en todos los backends; PyTorch {env['torch']}, ONNX Runtime "
+        f"{env['onnxruntime']} (spinning de hilos desactivado, como en el servicio), Python "
+        f"{env['python']}. {env['measured_iterations']} iteraciones tras "
+        f"{env['warmup_iterations']} de calentamiento, {env['repeats_per_stage']} corridas por "
+        f"etapa ({stability}), cada backend en un proceso propio. Script: "
+        "`benchmarks/bench_latency.py`; datos crudos en `benchmarks/results.json`."
+    )
+    if int8_eval:
+        subset, maps = int8_eval["subset"], int8_eval["map"]
+        low, high = (-v for v in reversed(int8_eval["int8_drop_ci95_points"]))
+        int8 = (
+            f"Sobre int8: en {subset['n_videos']} de los {subset['of']} videos de test de SAGES "
+            f"2024 (elegidos al azar con semilla {subset['seed']}; {int8_eval['n_keyframes']} "
+            f"fotogramas clave, etiqueta por voto mayoritario), la macro mAP pasa de "
+            f"{maps['fp32']['macro']:.1f} en fp32 a {maps['int8']['macro']:.1f} en int8 "
+            f"({-int8_eval['int8_drop_points']:+.1f} puntos; IC 95% por bootstrap de videos: "
+            f"{low:+.1f} a {high:+.1f}). La decisión con umbral 0.5 coincide en el "
+            f"{int8_eval['threshold_agreement'] * 100:.1f}% de los casos. Es un subconjunto del "
+            "test, así que su mAP absoluta no es comparable con la del paper; lo que mide es la "
+            "diferencia entre precisiones sobre los mismos frames. Script: "
+            "`benchmarks/eval_map.py`."
+        )
+    else:
+        int8 = (
+            f"Sobre int8: con {drift['n_frames']} frames sintéticos, la probabilidad difiere de "
+            f"fp32 como máximo en {drift['max_abs_prob_diff']:.3f} y la decisión por criterio "
+            f"coincide en {agree} de {n_decisions} casos. Eso no reemplaza medir la mAP en SAGES; "
+            "hasta entonces el servicio usa fp32 por defecto."
+        )
+    wrap = textwrap.TextWrapper(width=79, break_on_hyphens=False)
+    return "\n".join([*lines, "", wrap.fill(method), "", wrap.fill(int8)])
+
+
+def update_readme(readme: Path, results: dict) -> None:
+    """Reemplaza lo que hay entre los marcadores bench:start y bench:end."""
+    text = readme.read_text(encoding="utf-8")
+    start, end = text.find(README_START), text.find(README_END)
+    if start < 0 or end < start:
+        raise ValueError(f"{readme} no tiene los marcadores {README_START!r} y {README_END!r}")
+    body = render_latency_section(results["latency"], results.get("int8_eval"))
+    new = text[: start + len(README_START)] + "\n" + body + "\n" + text[end:]
+    readme.write_text(new, encoding="utf-8")
+    logger.info("Sección de latencia actualizada en %s", readme)
 
 
 if __name__ == "__main__":
