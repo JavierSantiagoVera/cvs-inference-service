@@ -216,4 +216,5 @@ Basado en **PercEVA-CVS**: S. Cañar, J. S. Vera, I. S. Tovar, P. Arbeláez,
 Models", SafeSurg Workshop, MICCAI 2026.
 [Código original](https://github.com/BCV-Uniandes/PercEVA-CVS) — CC BY-NC-SA 4.0.
 
-Este repositorio hereda la licencia **CC BY-NC-SA 4.0**.
+Este repositorio hereda la licencia **CC BY-NC-SA 4.0** ([`LICENSE`](LICENSE));
+la atribución y los cambios respecto al original están en [`NOTICE`](NOTICE).

@@ -1,20 +1,3 @@
-CVS Inference Service
-© 2026 Javier Santiago Vera Rincón
-
-Adapted from PercEVA-CVS, "Annotation-Efficient Critical View of Safety
-Assessment with Vision Foundation Models"
-© 2026 Sergio Andrés Cañar Lozano, Javier Santiago Vera Rincón,
-Isabel Sofía Tovar Sánchez, Pablo Arbeláez — Universidad de los Andes
-https://github.com/BCV-Uniandes/PercEVA-CVS
-Changes: ONNX export, INT8 quantization, inference API and benchmarks; the
-temporal Perceiver in src/cvs_serve/perceiver.py is adapted from the original.
-
-This work is licensed under the Creative Commons
-Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
-https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-The full legal code follows.
-
 Attribution-NonCommercial-ShareAlike 4.0 International
 
 =======================================================================
