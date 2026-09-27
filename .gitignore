@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+
+# Modelos y datos: nunca al repo
+models/
+data/
+*.pt
+*.pth
+*.onnx
+*.npz
+*.npy
+*.mp4
+*.avi
+
+# Excepción: resultados de benchmark sí se versionan
+!benchmarks/results.json
+
+.pytest_cache/
+.ruff_cache/
+.DS_Store
