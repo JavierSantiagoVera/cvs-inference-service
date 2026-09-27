@@ -23,5 +23,362 @@
       "n_frames": 15
     },
     "int8_map_drop": null
+  },
+  "latency": {
+    "pytorch_onnx_parity": {
+      "encoder_max_abs_diff": 4.76837158203125e-06,
+      "perceiver_max_abs_diff": 9.313225746154785e-08,
+      "rtol": 0.001,
+      "atol": 1e-05
+    },
+    "int8_vs_fp32_pipeline": {
+      "max_abs_prob_diff": 0.0212,
+      "threshold_agreement": 0.9777777777777777,
+      "n_frames": 15,
+      "note": "entradas sintéticas, sin set de validación clínico"
+    },
+    "environment": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "python": "3.14.3",
+      "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor",
+      "gpu": "ninguna (solo CPU)",
+      "torch": "2.14.0+cpu",
+      "onnxruntime": "1.30.0",
+      "onnxruntime_provider": "CPUExecutionProvider",
+      "onnxruntime_allow_spinning": false,
+      "threads": 16,
+      "seed": 0,
+      "warmup_iterations": 15,
+      "measured_iterations": 120,
+      "repeats_per_stage": 2,
+      "process_isolation": "un proceso por backend"
+    },
+    "backends": {
+      "pytorch_fp32": {
+        "size_mb": 1264.8,
+        "size_note": "pesos en memoria (parámetros × bytes fp32), no tamaño en disco",
+        "modules_in_process": [
+          "onnxruntime",
+          "torch"
+        ],
+        "stages": {
+          "encoder": {
+            "runs": [
+              {
+                "p50_ms": 948.138,
+                "p95_ms": 1101.592,
+                "mean_ms": 956.969,
+                "min_ms": 875.116,
+                "max_ms": 1145.337,
+                "throughput_img_s": 1.05,
+                "n": 120
+              },
+              {
+                "p50_ms": 932.573,
+                "p95_ms": 1092.578,
+                "mean_ms": 946.368,
+                "min_ms": 864.859,
+                "max_ms": 1208.025,
+                "throughput_img_s": 1.07,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 1.67,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 932.573,
+              "p95_ms": 1092.578,
+              "mean_ms": 946.368,
+              "min_ms": 864.859,
+              "max_ms": 1208.025,
+              "throughput_img_s": 1.07,
+              "n": 120
+            }
+          },
+          "perceiver": {
+            "runs": [
+              {
+                "p50_ms": 6.861,
+                "p95_ms": 8.197,
+                "mean_ms": 6.928,
+                "min_ms": 5.383,
+                "max_ms": 10.448,
+                "throughput_img_s": 145.75,
+                "n": 120
+              },
+              {
+                "p50_ms": 6.867,
+                "p95_ms": 8.635,
+                "mean_ms": 6.908,
+                "min_ms": 5.389,
+                "max_ms": 10.541,
+                "throughput_img_s": 145.62,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.09,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 6.867,
+              "p95_ms": 8.635,
+              "mean_ms": 6.908,
+              "min_ms": 5.389,
+              "max_ms": 10.541,
+              "throughput_img_s": 145.62,
+              "n": 120
+            }
+          },
+          "full": {
+            "runs": [
+              {
+                "p50_ms": 943.371,
+                "p95_ms": 1104.821,
+                "mean_ms": 955.476,
+                "min_ms": 862.238,
+                "max_ms": 1246.286,
+                "throughput_img_s": 1.06,
+                "n": 120
+              },
+              {
+                "p50_ms": 930.387,
+                "p95_ms": 1098.562,
+                "mean_ms": 943.181,
+                "min_ms": 853.755,
+                "max_ms": 1220.173,
+                "throughput_img_s": 1.07,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 1.4,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 930.387,
+              "p95_ms": 1098.562,
+              "mean_ms": 943.181,
+              "min_ms": 853.755,
+              "max_ms": 1220.173,
+              "throughput_img_s": 1.07,
+              "n": 120
+            }
+          }
+        }
+      },
+      "onnx_fp32": {
+        "size_mb": 1267.9,
+        "onnxruntime_version": "1.30.0",
+        "modules_in_process": [
+          "onnxruntime"
+        ],
+        "stages": {
+          "encoder": {
+            "runs": [
+              {
+                "p50_ms": 730.418,
+                "p95_ms": 771.703,
+                "mean_ms": 732.463,
+                "min_ms": 692.526,
+                "max_ms": 784.455,
+                "throughput_img_s": 1.37,
+                "n": 120
+              },
+              {
+                "p50_ms": 736.931,
+                "p95_ms": 773.213,
+                "mean_ms": 736.977,
+                "min_ms": 693.782,
+                "max_ms": 812.249,
+                "throughput_img_s": 1.36,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.89,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 736.931,
+              "p95_ms": 773.213,
+              "mean_ms": 736.977,
+              "min_ms": 693.782,
+              "max_ms": 812.249,
+              "throughput_img_s": 1.36,
+              "n": 120
+            }
+          },
+          "perceiver": {
+            "runs": [
+              {
+                "p50_ms": 4.643,
+                "p95_ms": 5.043,
+                "mean_ms": 4.64,
+                "min_ms": 4.206,
+                "max_ms": 5.422,
+                "throughput_img_s": 215.38,
+                "n": 120
+              },
+              {
+                "p50_ms": 4.641,
+                "p95_ms": 5.147,
+                "mean_ms": 4.699,
+                "min_ms": 4.252,
+                "max_ms": 6.81,
+                "throughput_img_s": 215.49,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.04,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 4.641,
+              "p95_ms": 5.147,
+              "mean_ms": 4.699,
+              "min_ms": 4.252,
+              "max_ms": 6.81,
+              "throughput_img_s": 215.49,
+              "n": 120
+            }
+          },
+          "full": {
+            "runs": [
+              {
+                "p50_ms": 733.764,
+                "p95_ms": 774.55,
+                "mean_ms": 736.308,
+                "min_ms": 703.155,
+                "max_ms": 785.311,
+                "throughput_img_s": 1.36,
+                "n": 120
+              },
+              {
+                "p50_ms": 740.379,
+                "p95_ms": 789.137,
+                "mean_ms": 743.471,
+                "min_ms": 705.8,
+                "max_ms": 825.081,
+                "throughput_img_s": 1.35,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.9,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 740.379,
+              "p95_ms": 789.137,
+              "mean_ms": 743.471,
+              "min_ms": 705.8,
+              "max_ms": 825.081,
+              "throughput_img_s": 1.35,
+              "n": 120
+            }
+          }
+        }
+      },
+      "onnx_int8": {
+        "size_mb": 341.7,
+        "onnxruntime_version": "1.30.0",
+        "modules_in_process": [
+          "onnxruntime"
+        ],
+        "stages": {
+          "encoder": {
+            "runs": [
+              {
+                "p50_ms": 266.828,
+                "p95_ms": 292.92,
+                "mean_ms": 269.27,
+                "min_ms": 249.429,
+                "max_ms": 307.934,
+                "throughput_img_s": 3.75,
+                "n": 120
+              },
+              {
+                "p50_ms": 264.774,
+                "p95_ms": 296.457,
+                "mean_ms": 269.699,
+                "min_ms": 250.028,
+                "max_ms": 312.432,
+                "throughput_img_s": 3.78,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.78,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 264.774,
+              "p95_ms": 296.457,
+              "mean_ms": 269.699,
+              "min_ms": 250.028,
+              "max_ms": 312.432,
+              "throughput_img_s": 3.78,
+              "n": 120
+            }
+          },
+          "perceiver": {
+            "runs": [
+              {
+                "p50_ms": 3.299,
+                "p95_ms": 3.701,
+                "mean_ms": 3.333,
+                "min_ms": 2.997,
+                "max_ms": 4.35,
+                "throughput_img_s": 303.11,
+                "n": 120
+              },
+              {
+                "p50_ms": 3.316,
+                "p95_ms": 3.765,
+                "mean_ms": 3.347,
+                "min_ms": 2.955,
+                "max_ms": 4.273,
+                "throughput_img_s": 301.6,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.52,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 3.316,
+              "p95_ms": 3.765,
+              "mean_ms": 3.347,
+              "min_ms": 2.955,
+              "max_ms": 4.273,
+              "throughput_img_s": 301.6,
+              "n": 120
+            }
+          },
+          "full": {
+            "runs": [
+              {
+                "p50_ms": 275.301,
+                "p95_ms": 299.159,
+                "mean_ms": 277.85,
+                "min_ms": 256.726,
+                "max_ms": 313.05,
+                "throughput_img_s": 3.63,
+                "n": 120
+              },
+              {
+                "p50_ms": 275.498,
+                "p95_ms": 311.918,
+                "mean_ms": 280.65,
+                "min_ms": 259.844,
+                "max_ms": 337.271,
+                "throughput_img_s": 3.63,
+                "n": 120
+              }
+            ],
+            "p50_variation_pct": 0.07,
+            "stable_across_runs": true,
+            "reported": {
+              "p50_ms": 275.498,
+              "p95_ms": 311.918,
+              "mean_ms": 280.65,
+              "min_ms": 259.844,
+              "max_ms": 337.271,
+              "throughput_img_s": 3.63,
+              "n": 120
+            }
+          }
+        }
+      }
+    }
   }
 }
