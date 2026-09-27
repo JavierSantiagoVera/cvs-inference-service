@@ -7,8 +7,11 @@ __pycache__/
 # Modelos y datos: nunca al repo
 models/
 data/
+perceva_cvs_weights/
 *.pt
 *.pth
+*.safetensors
+*.bin
 *.onnx
 *.npz
 *.npy
