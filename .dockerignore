@@ -1,0 +1,7 @@
+# Solo entran pyproject.toml, uv.lock y src/. Todo lo demás queda fuera,
+# en especial los pesos: son varios GB y están entrenados con datos clínicos.
+*
+!pyproject.toml
+!uv.lock
+!src/
+**/__pycache__
