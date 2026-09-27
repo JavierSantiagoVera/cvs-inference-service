@@ -146,7 +146,7 @@ primeros 14 frames el modelo ve menos historia.
 | Variable | Por defecto | |
 |---|---|---|
 | `CVS_MODELS_DIR` | `models` (`/models` en Docker) | directorio con los `.onnx` |
-| `CVS_PRECISION` | `fp32` | `fp32` o `int8` |
+| `CVS_PRECISION` | `int8` | `int8` o `fp32` |
 | `CVS_MAX_SESSIONS` | `32` | sesiones simultáneas |
 | `CVS_SESSION_TTL_S` | `300` | segundos de inactividad antes de expirar una sesión |
 | `CVS_NUM_THREADS` | `0` | hilos de ONNX Runtime; `0` = automático |

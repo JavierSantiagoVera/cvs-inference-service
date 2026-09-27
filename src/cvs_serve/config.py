@@ -53,8 +53,9 @@ class Settings:
     """Configuración del servicio, leída de variables de entorno CVS_*."""
 
     models_dir: Path = Path("models")
-    # fp32 por defecto: la caída de mAP de int8 aún no está medida.
-    precision: str = "fp32"
+    # int8: 2.7x más rápido que fp32 sin caída de mAP medible en SAGES
+    # (+0.3 pts, IC 95% -0.4 a +0.9; ver benchmarks/results.json → int8_eval).
+    precision: str = "int8"
     max_sessions: int = 32
     session_ttl_s: float = 300.0
     num_threads: int = 0  # 0 = lo decide ONNX Runtime

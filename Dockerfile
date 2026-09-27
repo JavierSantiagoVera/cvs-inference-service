@@ -21,7 +21,7 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     CVS_MODELS_DIR=/models \
-    CVS_PRECISION=fp32
+    CVS_PRECISION=int8
 USER app
 EXPOSE 8000
 

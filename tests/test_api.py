@@ -123,7 +123,7 @@ def test_health_reports_precision_and_active_sessions(client: TestClient) -> Non
 
     assert client.get("/health").json() == {
         "status": "ok",
-        "precision": "fp32",
+        "precision": "int8",
         "active_sessions": 1,
     }
 
