@@ -1,4 +1,4 @@
-"""Genera docs/demo.gif: una sesión real contra la API, con frames sintéticos.
+"""Genera docs/demo.gif (inglés) y docs/demo.es.gif: una sesión real contra la API.
 
 Levanta el servicio con los modelos de models/, ejecuta curl de verdad y dibuja
 la terminal con las mismas condiciones que benchmarks/bench_latency.py (int8,
@@ -94,52 +94,109 @@ def _wait_for_health(timeout_s: float = 120) -> None:
     raise TimeoutError("La API no respondió a /health")
 
 
-def record_session(workdir: Path) -> list[tuple[str, list[tuple[str, str]]]]:
-    """Ejecuta la sesión y devuelve pasos (comando, líneas de salida con su color)."""
+def record_session(workdir: Path) -> list[dict]:
+    """Ejecuta la sesión con curl y devuelve cada paso: comando, código, latencia y respuesta."""
     frames = _synthetic_frames(workdir)
-    steps = []
+    events = []
 
     code, ms, body = _curl(["-X", "POST", f"{BASE}/sessions"], workdir)
-    session_id = json.loads(body)["session_id"]
-    steps.append(
-        (
-            f"curl -X POST {BASE}/sessions",
-            [(f"← {code} · session_id {session_id[:8]}… · ventana de 15 s a 1 fps", "ok")],
-        )
+    created = json.loads(body)
+    session_id = created["session_id"]
+    events.append(
+        {
+            "kind": "create",
+            "command": f"curl -X POST {BASE}/sessions",
+            "code": code,
+            "ms": ms,
+            "response": created,
+        }
     )
     for frame in frames:
         code, ms, body = _curl(
             ["-X", "POST", f"{BASE}/sessions/{session_id}/frames", "-F", f"file=@{frame.name}"],
             workdir,
         )
-        r = json.loads(body)
-        probs = "  ".join(f"{k} {v:.2f}" for k, v in r["probabilities"].items())
-        steps.append(
-            (
-                f"curl -X POST {BASE}/sessions/$SID/frames -F file=@{frame.name}",
-                [
-                    (
-                        f"← {code} · {ms:.0f} ms · frame {r['frame_index']} · "
-                        f"ventana {r['window_filled']}/{r['window_size']}",
-                        "ok",
-                    ),
-                    (f"  {probs}  ·  cvs_achieved {str(r['cvs_achieved']).lower()}", "muted"),
-                ],
-            )
+        events.append(
+            {
+                "kind": "frame",
+                "command": f"curl -X POST {BASE}/sessions/$SID/frames -F file=@{frame.name}",
+                "code": code,
+                "ms": ms,
+                "response": json.loads(body),
+            }
         )
     code, ms, _ = _curl(["-X", "DELETE", f"{BASE}/sessions/{session_id}"], workdir)
-    steps.append((f"curl -X DELETE {BASE}/sessions/$SID", [(f"← {code} · sesión cerrada", "ok")]))
+    events.append(
+        {
+            "kind": "delete",
+            "command": f"curl -X DELETE {BASE}/sessions/$SID",
+            "code": code,
+            "ms": ms,
+            "response": None,
+        }
+    )
+    return events
+
+
+TEXT = {
+    "en": {
+        "suffix": "",
+        "header": (
+            "# CVS Inference Service · one video session, one frame per second",
+            "# synthetic frames: shows the API flow, not clinical predictions",
+        ),
+        "created": "← {code} · session_id {sid}… · 15 s window at 1 fps",
+        "frame": "← {code} · {ms} ms · frame {index} · window {filled}/{size}",
+        "deleted": "← {code} · session closed",
+    },
+    "es": {
+        "suffix": ".es",
+        "header": (
+            "# CVS Inference Service · una sesión de video, un frame por segundo",
+            "# frames sintéticos: muestra el flujo de la API, no predicciones clínicas",
+        ),
+        "created": "← {code} · session_id {sid}… · ventana de 15 s a 1 fps",
+        "frame": "← {code} · {ms} ms · frame {index} · ventana {filled}/{size}",
+        "deleted": "← {code} · sesión cerrada",
+    },
+}
+
+
+def describe(events: list[dict], lang: str) -> list[tuple[str, list[tuple[str, str]]]]:
+    """Convierte la sesión grabada en pasos (comando, líneas de salida con su color)."""
+    text = TEXT[lang]
+    steps = []
+    for event in events:
+        r, code = event["response"], event["code"]
+        if event["kind"] == "create":
+            lines = [(text["created"].format(code=code, sid=r["session_id"][:8]), "ok")]
+        elif event["kind"] == "frame":
+            probs = "  ".join(f"{k} {v:.2f}" for k, v in r["probabilities"].items())
+            lines = [
+                (
+                    text["frame"].format(
+                        code=code,
+                        ms=f"{event['ms']:.0f}",
+                        index=r["frame_index"],
+                        filled=r["window_filled"],
+                        size=r["window_size"],
+                    ),
+                    "ok",
+                ),
+                (f"  {probs}  ·  cvs_achieved {str(r['cvs_achieved']).lower()}", "muted"),
+            ]
+        else:
+            lines = [(text["deleted"].format(code=code), "ok")]
+        steps.append((event["command"], lines))
     return steps
 
 
-def render_gif(steps: list[tuple[str, list[tuple[str, str]]]], out: Path) -> None:
+def render_gif(
+    steps: list[tuple[str, list[tuple[str, str]]]], header: tuple[str, ...], out: Path
+) -> None:
     font, small = _font(16), _font(14)
-    header = [
-        ("# CVS Inference Service · una sesión de video, un frame por segundo", "muted"),
-        ("# frames sintéticos: muestra el flujo de la API, no predicciones clínicas", "muted"),
-        ("", "text"),
-    ]
-    total_lines = len(header) + sum(1 + len(out_lines) for _, out_lines in steps)
+    header_lines = [*((line, "muted") for line in header), ("", "text")]
+    total_lines = len(header_lines) + sum(1 + len(out_lines) for _, out_lines in steps)
     height = PAD * 2 + LINE_H * total_lines
 
     def draw(lines: list[tuple[str, str]]) -> Image.Image:
@@ -156,7 +213,7 @@ def render_gif(steps: list[tuple[str, list[tuple[str, str]]]], out: Path) -> Non
                 )
         return image
 
-    lines = list(header)
+    lines = list(header_lines)
     frames, durations = [draw(lines)], [900]
     for command, out_lines in steps:
         lines.append((f"$ {command}", "text"))
@@ -178,7 +235,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--models", type=Path, default=Path("models"))
     parser.add_argument("--precision", default="int8")
     parser.add_argument("--threads", type=int, default=16, help="igual que el benchmark")
-    parser.add_argument("--out", type=Path, default=Path("docs/demo.gif"))
+    parser.add_argument("--out", type=Path, default=Path("docs"))
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
@@ -197,11 +254,13 @@ def main(argv: list[str] | None = None) -> None:
     try:
         _wait_for_health()
         with tempfile.TemporaryDirectory() as tmp:
-            steps = record_session(Path(tmp))
+            events = record_session(Path(tmp))
     finally:
         server.terminate()
         server.wait(timeout=30)
-    render_gif(steps, args.out)
+    # Una sola sesión grabada, dibujada en cada idioma: ambos GIF muestran las mismas cifras.
+    for lang, text in TEXT.items():
+        render_gif(describe(events, lang), text["header"], args.out / f"demo{text['suffix']}.gif")
 
 
 if __name__ == "__main__":

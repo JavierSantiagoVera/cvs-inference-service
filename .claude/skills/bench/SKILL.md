@@ -18,14 +18,15 @@ Modelos: !`ls models/*.onnx 2>/dev/null || echo "ninguno: correr primero /export
 
 2. **Medir.** Tarda ~15 minutos en CPU:
    ```bash
-   uv run python benchmarks/bench_latency.py --readme README.md
+   uv run python benchmarks/bench_latency.py --readme
    ```
    El script verifica primero la paridad PyTorch vs ONNX fp32 y se detiene si
    falla. Cada backend corre en un proceso propio (con torch cargado, int8 sale
    ~37% más lento) y ONNX Runtime usa `make_onnx_session`, la misma
    configuración del servicio.
 
-   Con `--render-only` no mide: solo regenera el README desde el JSON actual.
+   `--readme` sin rutas actualiza `README.md` (inglés) y `README.es.md` (español).
+   Con `--render-only` no mide: solo regenera ambos README desde el JSON actual.
 
 3. **Revisar antes de aceptar las cifras.**
    - Si el log muestra `WARNING ... varió X% entre corridas`, no publicar: repetir

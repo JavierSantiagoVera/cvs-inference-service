@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="264" viewBox="0 0 720 264" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" aria-label="Per-frame latency of PyTorch fp32, ONNX fp32 and ONNX int8">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="264" viewBox="0 0 720 264" role="img" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" aria-label="Latencia por frame de PyTorch fp32, ONNX fp32 y ONNX int8">
 <rect width="720" height="264" rx="8" fill="#1a1a19"/>
-<text x="20" y="32" font-size="16" font-weight="600" fill="#ffffff">Latency per frame</text>
-<text x="20" y="52" font-size="12" fill="#c3c2b7">Full step, batch 1, CPU AMD Ryzen 7 9800X3D · lower is better</text>
+<text x="20" y="32" font-size="16" font-weight="600" fill="#ffffff">Latencia por frame</text>
+<text x="20" y="52" font-size="12" fill="#c3c2b7">Paso completo, batch 1, CPU AMD Ryzen 7 9800X3D · menos es mejor</text>
 <rect x="530" y="25" width="12" height="12" rx="2" fill="#3987e5"/>
 <text x="548" y="35" font-size="12" fill="#c3c2b7">p50</text>
 <rect x="590" y="23" width="3" height="16" rx="1" fill="#d95926"/>
